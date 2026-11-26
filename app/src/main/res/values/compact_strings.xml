@@ -13,4 +13,6 @@
     <string name="compact_reasoning_xhigh">Extra high</string>
     <string name="compact_reasoning_max">Max</string>
     <string name="compact_reasoning_ultra">Ultra</string>
+    <string name="compact_expanded">Expanded</string>
+    <string name="compact_collapsed">Collapsed</string>
 </resources>

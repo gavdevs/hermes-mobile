@@ -76,9 +76,12 @@ import com.m57.hermescontrol.theme.LocalHermesStatusColors
 import com.m57.hermescontrol.ui.common.DisableDrawerGestures
 import com.m57.hermescontrol.ui.common.DrawerGestureController
 import com.m57.hermescontrol.ui.common.ExpandedSidebarBreakpoint
+import com.m57.hermescontrol.ui.common.LocalCompactLayout
 import com.m57.hermescontrol.ui.common.LocalDrawerGestureController
 import com.m57.hermescontrol.ui.common.SidebarWidth
 import com.m57.hermescontrol.ui.common.WhatsNewDialog
+import com.m57.hermescontrol.ui.navigation.CompactDrawer
+import com.m57.hermescontrol.ui.navigation.rememberCompactDrawerState
 import com.m57.hermescontrol.ui.plugins.MemoryProviderDetailScreen
 import com.m57.hermescontrol.ui.profiles.AgentNameDialog
 import com.m57.hermescontrol.ui.settings.ClientCertificatesPage
@@ -257,6 +260,7 @@ fun MainNavigation(sessionId: String? = null) {
     val currentScreen = backStack.lastOrNull() ?: startScreen
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val compactDrawerState = if (LocalCompactLayout.current) rememberCompactDrawerState() else null
 
     // Single source of truth for drawer gestures (issue #619).
     // HermesScaffold / DisableDrawerGestures reconcile each screen's preference
@@ -324,11 +328,15 @@ fun MainNavigation(sessionId: String? = null) {
             drawerState = drawerState,
             gesturesEnabled = gestureController.enabled,
             drawerBody = { onItemClick ->
-                NavigationDrawerBody(
-                    currentScreen = currentScreen,
-                    hasToken = hasToken,
-                    onItemClick = onItemClick,
-                )
+                if (compactDrawerState != null) {
+                    CompactDrawer(currentScreen, hasToken, compactDrawerState, onItemClick)
+                } else {
+                    NavigationDrawerBody(
+                        currentScreen = currentScreen,
+                        hasToken = hasToken,
+                        onItemClick = onItemClick,
+                    )
+                }
             },
             onModalItemClick = { scope.launch { drawerState.close() } },
         ) {
