@@ -18,11 +18,14 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -157,9 +160,7 @@ import com.m57.hermescontrol.ui.common.ActionProgressDialog
 import com.m57.hermescontrol.ui.common.AutoScrollingTitleText
 import com.m57.hermescontrol.ui.common.CredentialWarningBanner
 import com.m57.hermescontrol.ui.common.HermesIconButton
-import com.m57.hermescontrol.ui.common.HermesScaffold
 import com.m57.hermescontrol.ui.common.LocalCompactLayout
-import com.m57.hermescontrol.ui.common.NavIcon
 import com.m57.hermescontrol.ui.common.ReadableContentMaxWidth
 import com.m57.hermescontrol.ui.model.components.ModelPickerDialog
 import com.m57.hermescontrol.ui.settings.SettingsViewModel
@@ -196,7 +197,7 @@ internal fun canStartAttachmentSave(
  * this entry point handles only state hoisting, scaffold wiring, and the
  * remembered launchers that need to be activity-scoped.
  */
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
     modifier: Modifier = Modifier,
@@ -568,10 +569,11 @@ fun ChatScreen(
         onClearDraft = { inputState.replaceComposerDraft("") },
     )
 
-    HermesScaffold(
-        showConnectionBanner = false,
+    val hideCompactAppBar = LocalCompactLayout.current && WindowInsets.isImeVisible
+
+    CompactChatScaffold(
         modifier = modifier,
-        pinTopBar = true,
+        hideAppBar = hideCompactAppBar,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // #1747: an untitled chat shows the active profile's agent name.
@@ -615,7 +617,7 @@ fun ChatScreen(
                 }
             }
         },
-        navigationIcon = onOpenDrawer?.let { NavIcon.Menu(it) },
+        onOpenDrawer = onOpenDrawer,
         snackbarHost = {
             SnackbarHost(snackbarHostState, modifier = Modifier.imePadding()) { data ->
                 val statusColors = LocalHermesStatusColors.current
@@ -803,7 +805,8 @@ fun ChatScreen(
                     .wrapContentWidth(Alignment.CenterHorizontally)
                     .widthIn(max = ReadableContentMaxWidth),
         ) {
-            if (LocalCompactLayout.current) {
+            // LP3 task 3.6: the context meter also reserves a 48dp row; reclaim it while typing.
+            if (LocalCompactLayout.current && !hideCompactAppBar) {
                 CompactContextUsage(state.usedContextTokens, state.fullContextTokens) {
                     showContextSheet = true
                     viewModel.fetchSessionDetailBreakdown()

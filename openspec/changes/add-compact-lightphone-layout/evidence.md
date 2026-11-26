@@ -119,3 +119,45 @@ The context meter's 2dp visual line reserves a 48dp non-overlapping hit area. Th
 1. **Theme mode:** should fresh installs default to `DARK`, or retain `SYSTEM`? The documents specify a preset-id-only change, while AMOLED is dark-only and intentionally falls back to Default-light when system mode is light. This implementation changes only the preset default, leaves saved modes intact, and leaves 6.2 unchecked rather than silently forcing dark mode.
 2. The all-configuration auth safe-area fix and the fork-only first-run preset are explicitly documented exceptions to regular-phone parity. Other regular paths retain their existing controls, text, callbacks and rendering branches, but pixel parity has not been measured.
 3. Parent verification still needs normal/enlarged text, RTL, theme variants, TalkBack, keyboard-open geometry, clearing filters, selection/prune/undo, recording/dictation, drawer expansion, and model/context sheet opening.
+
+## Review fixes — LP3 tasks 6.2 and 3.6
+
+- Task 6.2 supersedes the theme-mode question above: the fork now defaults to
+  `AMOLED` + `DARK` in `ServerStoreState`, the legacy migration's missing/invalid
+  mode fallback, and `AuthManager`'s initial theme flow. Dynamic colors remain
+  off by default. Saved modes are still decoded, not overwritten.
+  `ServerStoreTest` now checks constructed/empty-JSON defaults and round-trips
+  every preset/mode combination, including explicit `LIGHT` and `SYSTEM`.
+  No palette, registry, or preset-switcher changes.
+- Task 3.6 uses `WindowInsets.isImeVisible` only with `LocalCompactLayout`.
+  `CompactChatAppBar.kt` adds a compact-only scaffold adapter because the shared
+  scaffold has no bar-visibility slot and is outside the permitted edit scope.
+  The compact scaffold omits the entire `TopAppBar` while typing; its top inset
+  and padding therefore disappear too. Its content remains at one composition
+  site across IME changes, preserving the focused composer. Closing the IME
+  restores the bar. Regular chat delegates to `HermesScaffold` with its previous
+  arguments. Drawer ownership, feedback snackbars, menu actions, theme tokens,
+  and existing 48dp action targets are retained.
+- The compact context meter's entire 48dp hit row also disappears while typing;
+  no undersized clickable hairline replaces it. Static arithmetic from the
+  review's estimates is `44px + 110px = 154px` for bar removal alone; removing
+  the context row additionally reclaims 48dp when present. A >=220px or >=3-line
+  claim still requires the parent's density/layout measurement; it is not
+  established by compilation or these mixed px/dp estimates.
+- Static inspection traced the fresh defaults through the theme dispatcher:
+  `DARK` resolves AMOLED's dark palette rather than its Default-light fallback.
+  Runtime screenshots, keyboard geometry, and visual acceptance remain with
+  the parent. No emulator/adb or preview rendering; no task boxes changed.
+- After the last source edit, using the SDK/JDK/ktlint environment above:
+
+  ```bash
+  ./gradlew ktlintCheck checkColorLiterals testDebugUnitTest \
+    --tests com.m57.hermescontrol.data.config.ServerStoreTest \
+    --tests com.m57.hermescontrol.theme.ThemePaletteTest assembleDebug
+  ```
+
+  Result: `BUILD SUCCESSFUL in 36s`; 49 actionable tasks (13 executed,
+  36 up-to-date). Both lint/color gates executed; no hardcoded color literals.
+  Each test class reported 11 tests, zero failures/errors/skips. Debug APK:
+  `app/build/outputs/apk/debug/app-debug.apk`. Existing crypto API deprecation
+  warnings remain. No full unit suite or instrumented tests were run.
