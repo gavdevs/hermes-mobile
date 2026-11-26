@@ -1,5 +1,6 @@
 package com.m57.hermescontrol.data.config
 
+import com.m57.hermescontrol.theme.ThemePreference
 import com.m57.hermescontrol.theme.ThemePreset
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.junit.Assert.assertEquals
@@ -11,13 +12,22 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class ServerStoreTest {
     @Test
-    fun forkPresetDefaultPreservesExplicitSavedChoices() {
+    fun forkThemeDefaultsPreserveExplicitSavedChoices() {
         val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
-        assertEquals(ThemePreset.AMOLED, ServerStoreState().themePreset)
-        assertEquals(ThemePreset.AMOLED, json.decodeFromString<ServerStoreState>("{}").themePreset)
+        val fresh = ServerStoreState()
+        val decodedDefault = json.decodeFromString<ServerStoreState>("{}")
+        assertEquals(ThemePreset.AMOLED, fresh.themePreset)
+        assertEquals(ThemePreference.DARK, fresh.themePreference)
+        assertEquals(ThemePreset.AMOLED, decodedDefault.themePreset)
+        assertEquals(ThemePreference.DARK, decodedDefault.themePreference)
         for (preset in ThemePreset.entries) {
-            val encoded = json.encodeToString(ServerStoreState.serializer(), ServerStoreState(themePreset = preset))
-            assertEquals(preset, json.decodeFromString<ServerStoreState>(encoded).themePreset)
+            for (preference in ThemePreference.entries) {
+                val saved = ServerStoreState(themePreset = preset, themePreference = preference)
+                val encoded = json.encodeToString(ServerStoreState.serializer(), saved)
+                val decoded = json.decodeFromString<ServerStoreState>(encoded)
+                assertEquals(preset, decoded.themePreset)
+                assertEquals(preference, decoded.themePreference)
+            }
         }
     }
 

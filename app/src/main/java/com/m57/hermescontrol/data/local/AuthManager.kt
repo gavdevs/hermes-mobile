@@ -75,7 +75,8 @@ object AuthManager {
                 "AuthManager not initialized. Call init(context) first.",
             )
 
-    private val _themePreferenceFlow = MutableStateFlow<ThemePreference>(ThemePreference.SYSTEM)
+    // LP3 task 6.2: use the fork's dark default before persisted preferences arrive.
+    private val _themePreferenceFlow = MutableStateFlow<ThemePreference>(ThemePreference.DARK)
     val themePreferenceFlow: StateFlow<ThemePreference> = _themePreferenceFlow.asStateFlow()
 
     private val _useDynamicColorsFlow = MutableStateFlow<Boolean>(false)

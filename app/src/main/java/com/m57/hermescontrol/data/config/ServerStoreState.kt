@@ -15,7 +15,8 @@ data class ServerStoreState(
     val autoReconnect: Boolean = true,
     val restoreLastSession: Boolean = false,
     val lastOpenedSessionIds: Map<String, String> = emptyMap(),
-    val themePreference: ThemePreference = ThemePreference.SYSTEM,
+    // LP3 task 6.2: AMOLED is dark-only; SYSTEM can fall back to the light palette.
+    val themePreference: ThemePreference = ThemePreference.DARK,
     val useDynamicColors: Boolean = false,
     val themePreset: ThemePreset = ThemePreset.AMOLED,
     val connectionProfiles: List<ConnectionProfile> = emptyList(),

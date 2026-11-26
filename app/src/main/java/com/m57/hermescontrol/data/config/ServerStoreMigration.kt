@@ -50,10 +50,11 @@ class ServerStoreMigration(
         val port = prefs.getInt("port", 9119)
         val autoReconnect = prefs.getBoolean("auto_reconnect", true)
 
-        val themePrefString = prefs.getString("theme_preference", ThemePreference.SYSTEM.name)
+        // LP3 task 6.2: match the fork's dark default without overriding saved modes.
+        val themePrefString = prefs.getString("theme_preference", ThemePreference.DARK.name)
         val themePreference =
             runCatching { ThemePreference.valueOf(themePrefString!!) }
-                .getOrDefault(ThemePreference.SYSTEM)
+                .getOrDefault(ThemePreference.DARK)
 
         val useDynamicColors = prefs.getBoolean("use_dynamic_colors", false)
 
