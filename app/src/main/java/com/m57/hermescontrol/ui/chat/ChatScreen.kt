@@ -123,6 +123,7 @@ import com.m57.hermescontrol.ui.chat.components.ChatTimelineNoPrefetchStrategy
 import com.m57.hermescontrol.ui.chat.components.ChatTimelineSheet
 import com.m57.hermescontrol.ui.chat.components.CompactChatModelMenu
 import com.m57.hermescontrol.ui.chat.components.CompactContextUsage
+import com.m57.hermescontrol.ui.chat.components.CompactTaskProgressAction
 import com.m57.hermescontrol.ui.chat.components.ConnectionQuickSwitcherSheet
 import com.m57.hermescontrol.ui.chat.components.ConnectionSetupSheet
 import com.m57.hermescontrol.ui.chat.components.ContextDetailSheet
@@ -569,7 +570,13 @@ fun ChatScreen(
         onClearDraft = { inputState.replaceComposerDraft("") },
     )
 
-    val hideCompactAppBar = LocalCompactLayout.current && WindowInsets.isImeVisible
+    val compact = LocalCompactLayout.current
+    val hideCompactAppBar = compact && WindowInsets.isImeVisible
+    val workActive = shouldShowProgressChip(state.todos, state.subagentIndicators, state.backgroundProcesses)
+    val openWorkDetails = {
+        showSubagentInspectionSheet = true
+        scrollController.resumeFollowing()
+    }
 
     CompactChatScaffold(
         modifier = modifier,
@@ -636,6 +643,14 @@ fun ChatScreen(
             }
         },
         actions = {
+            if (compact && workActive) {
+                CompactTaskProgressAction(
+                    todos = state.todos,
+                    indicators = state.subagentIndicators,
+                    processes = state.backgroundProcesses,
+                    onClick = openWorkDetails,
+                )
+            }
             HermesIconButton(
                 imageVector = Icons.Filled.Add,
                 label = stringResource(R.string.content_desc_new_chat),
@@ -818,20 +833,16 @@ fun ChatScreen(
                 onReloginClick = viewModel.relogin::open,
             )
 
-            // Issue #942: compact glanceable progress strip while work is active.
-            // Bound to the same hydrated todos / subagentIndicators state.
-            // Auto-hides when all todos complete/cancel and no subagent is running.
-            val workActive = shouldShowProgressChip(state.todos, state.subagentIndicators, state.backgroundProcesses)
-            TaskProgressChip(
-                visible = workActive,
-                todos = state.todos,
-                indicators = state.subagentIndicators,
-                processes = state.backgroundProcesses,
-                onClick = {
-                    showSubagentInspectionSheet = true
-                    scrollController.resumeFollowing()
-                },
-            )
+            // Regular chat retains the floating work strip; compact exposes it in the app bar.
+            if (!compact) {
+                TaskProgressChip(
+                    visible = workActive,
+                    todos = state.todos,
+                    indicators = state.subagentIndicators,
+                    processes = state.backgroundProcesses,
+                    onClick = openWorkDetails,
+                )
+            }
 
             credentialWarning?.let { warning ->
                 CredentialWarningBanner(

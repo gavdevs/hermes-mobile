@@ -225,3 +225,26 @@ Notes:
   passed (`BUILD SUCCESSFUL in 33s`; 49 tasks, 14 executed, 35 up-to-date).
   Used the existing Android SDK/JDK and `/tmp/hermes-lp3-tools/ktlint`.
   APK: `app/build/outputs/apk/debug/app-debug.apk`. No visual verification.
+
+## Round 5 — compact composer and work status
+
+- Supersedes the paused composer decision above: compact buttons use 40dp
+  visuals in 80/120dp toolbar allocations, retaining Material3's
+  `minimumInteractiveComponentSize()` around each visual. Regular visuals stay
+  48dp. Glyphs, morphing, recording gestures, and send decisions are unchanged.
+- Compact composer chrome is transparent and square, with only a 1dp
+  `palette.cardBorder` rule below the input/control row, inset 8dp horizontally.
+  Existing field sizing, inner padding, attachment surfaces, and regular card
+  styling remain intact.
+- Compact active work appears only in the app-bar actions: 24dp activity icon
+  and existing localized counts at 11sp, both `palette.placeholder`. The
+  existing visibility predicate and sheet-opening callback are shared with the
+  regular floating chip; process data and the sheet are unchanged.
+- After the last source edit:
+  `./gradlew ktlintCheck checkColorLiterals testDebugUnitTest --tests com.m57.hermescontrol.ui.chat.TaskProgressChipTest assembleDebug`
+  passed (`BUILD SUCCESSFUL in 21s`; 49 tasks, 14 executed, 35 up-to-date).
+  All 16 scoped tests passed, with zero failures/errors/skips; color guard
+  reported no hardcoded literals. Used the existing SDK, JDK 21, and
+  `/tmp/hermes-lp3-tools/ktlint`. APK: `app/build/outputs/apk/debug/app-debug.apk`.
+- No push, emulator/adb, or visual/interaction verification. Actual touch
+  hit-testing and compact/regular screenshot acceptance remain owner checks.

@@ -16,10 +16,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.PendingActions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,9 +29,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.m57.hermescontrol.R
 import com.m57.hermescontrol.data.model.ProcessInfo
 import com.m57.hermescontrol.ui.chat.SubagentIndicator
@@ -63,44 +69,7 @@ internal fun TaskProgressChip(
         exit = shrinkVertically() + fadeOut(),
     ) {
         val display = computeChipDisplay(todos, indicators, processes)
-        val label =
-            buildString {
-                if (display.hasTodos) {
-                    append(stringResource(R.string.task_progress_count, display.currentTaskNumber, display.total))
-                    display.currentTaskContent?.let {
-                        append(" · ")
-                        append(it)
-                    }
-                } else if (display.activeAgents > 0) {
-                    append(
-                        pluralStringResource(
-                            R.plurals.task_progress_agent_running,
-                            display.activeAgents,
-                            display.activeAgents,
-                        ),
-                    )
-                }
-                if (display.hasTodos && display.activeAgents > 0) {
-                    append(" · ")
-                    append(
-                        pluralStringResource(
-                            R.plurals.task_progress_agents,
-                            display.activeAgents,
-                            display.activeAgents,
-                        ),
-                    )
-                }
-                if (display.runningProcesses > 0) {
-                    if (isNotEmpty()) append(" · ")
-                    append(
-                        pluralStringResource(
-                            R.plurals.task_progress_processes,
-                            display.runningProcesses,
-                            display.runningProcesses,
-                        ),
-                    )
-                }
-            }
+        val label = taskProgressLabel(display, includeTaskContent = true)
 
         Surface(
             modifier =
@@ -143,6 +112,90 @@ internal fun TaskProgressChip(
         }
     }
 }
+
+/** Compact chat keeps active work reachable without reserving a row above the composer. */
+@Composable
+internal fun CompactTaskProgressAction(
+    todos: List<TodoItem>,
+    indicators: List<SubagentIndicator>,
+    processes: List<ProcessInfo>,
+    onClick: () -> Unit,
+) {
+    val display = computeChipDisplay(todos, indicators, processes)
+    val tint = composerPalette().placeholder
+    val detailsLabel = stringResource(R.string.task_progress_open_details)
+    Row(
+        modifier =
+            Modifier
+                .clickable(role = Role.Button, onClick = onClick)
+                .minimumInteractiveComponentSize()
+                .padding(horizontal = 4.dp)
+                .semantics { contentDescription = detailsLabel }
+                .testTag("compact_task_progress_action"),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Icon(
+            imageVector = Icons.Filled.PendingActions,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(24.dp),
+        )
+        Text(
+            text = taskProgressLabel(display, includeTaskContent = false),
+            style = MaterialTheme.typography.labelSmall,
+            fontSize = 11.sp,
+            color = tint,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun taskProgressLabel(
+    display: ChipDisplay,
+    includeTaskContent: Boolean,
+): String =
+    buildString {
+        if (display.hasTodos) {
+            append(stringResource(R.string.task_progress_count, display.currentTaskNumber, display.total))
+            if (includeTaskContent) {
+                display.currentTaskContent?.let {
+                    append(" · ")
+                    append(it)
+                }
+            }
+        } else if (display.activeAgents > 0) {
+            append(
+                pluralStringResource(
+                    R.plurals.task_progress_agent_running,
+                    display.activeAgents,
+                    display.activeAgents,
+                ),
+            )
+        }
+        if (display.hasTodos && display.activeAgents > 0) {
+            append(" · ")
+            append(
+                pluralStringResource(
+                    R.plurals.task_progress_agents,
+                    display.activeAgents,
+                    display.activeAgents,
+                ),
+            )
+        }
+        if (display.runningProcesses > 0) {
+            if (isNotEmpty()) append(" · ")
+            append(
+                pluralStringResource(
+                    R.plurals.task_progress_processes,
+                    display.runningProcesses,
+                    display.runningProcesses,
+                ),
+            )
+        }
+    }
 
 /**
  * Pure, testable projection of the progress chip's data. The composable turns
