@@ -1,0 +1,19 @@
+schema: spec-driven
+
+context: |
+  Language: English. Keep OpenSpec headings and SHALL/MUST keywords in English.
+  Project: Hermes Mobile, a Kotlin/Jetpack Compose (Material 3 Expressive) client for the
+  Hermes Agent dashboard. Forked from Hy4ri/hermes-mobile (upstream). This tree is fork-only.
+  Branch: lp3 — long-lived, rebased onto upstream/main. Changes are runtime-gated compact
+  form-factor layouts intended to be upstreamable as narrow-screen adaptations; only the
+  AMOLED default-preset commit is deliberately fork-only.
+  Target device: Light Phone III — 1080x1240 px @ 420dpi = 411x472dp usable, OLED, Android
+  based (LightOS). Upstream DESIGN.md already asks for narrow-width verification; 48dp touch
+  targets and the design tokens remain mandatory.
+  Keep changes additive and isolated: new composables in new files, small call-site switches
+  on one composition-local flag, no refactors of upstream internals. Preserve upstream
+  behavior byte-for-byte on non-compact screens; no new dependencies.
+  Repo rules (AGENTS.md): PR-always, ktlint + color-guard CI, small commits, never invent
+  design values (use DESIGN.md tokens), do not restyle screens outside this change's scope.
+  openspec/specs describes evidenced current behavior after acceptance; changes holds
+  proposed deltas. openspec/roadmap.md owns sequencing.
