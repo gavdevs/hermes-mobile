@@ -33,11 +33,11 @@ object UpdateNoticeManager {
     private var channelGeneration = 0
 
     /**
-     * Release-only feature (issue #890): the launch check and chat banner are
-     * disabled in debug builds (BuildConfig.DEBUG) so daily dev builds never
-     * hit the GitHub API or nag about updates. Tests flip this to true.
+     * Disabled in this fork because Obtainium owns updates (LP3).
+     * Launch checks and chat notices stay off; tests can enable them.
+     * The About tab's explicit check remains available.
      */
-    var enabled: Boolean = !BuildConfig.DEBUG
+    var enabled: Boolean = false
         internal set
 
     /** Avoid duplicate foreground checks in one process; a cold launch always rechecks. */

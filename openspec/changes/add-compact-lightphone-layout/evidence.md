@@ -209,3 +209,19 @@ Notes:
   auto-probe); once pressed, loopback token extraction succeeded and the app signed in.
 - Known upstream quirk left alone: with a fresh install the app shows the misleading probing label
   until the first explicit press.
+
+## LP3 polish — fork update ownership
+
+- In-app launch/foreground checks and chat notices default off in every build;
+  Obtainium owns fork updates. The mutable test switch remains available.
+- About's explicit check still bypasses that switch and now queries
+  `gavdevs/hermes-mobile`. Version comparison is unchanged: `v3.6.2-lp3.1`
+  parses as numeric core `3.6.2` and prerelease identifiers `lp3`, `1`.
+- Composer polish is blocked on conflicting requirements: two/three 48dp
+  targets cannot fit the requested 80/120dp allocation without overlap.
+  No composer source or task boxes changed; no push or emulator/adb.
+- Verification after the last source edit:
+  `./gradlew ktlintCheck checkColorLiterals testDebugUnitTest --tests com.m57.hermescontrol.data.update.AppUpdateCheckerTest --tests com.m57.hermescontrol.data.update.UpdateNoticeManagerTest --tests com.m57.hermescontrol.data.update.WhatsNewNoticeTest --tests com.m57.hermescontrol.ui.settings.AppUpdateViewModelTest assembleDebug`
+  passed (`BUILD SUCCESSFUL in 33s`; 49 tasks, 14 executed, 35 up-to-date).
+  Used the existing Android SDK/JDK and `/tmp/hermes-lp3-tools/ktlint`.
+  APK: `app/build/outputs/apk/debug/app-debug.apk`. No visual verification.
