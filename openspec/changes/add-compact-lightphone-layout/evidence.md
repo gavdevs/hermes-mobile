@@ -161,3 +161,24 @@ The context meter's 2dp visual line reserves a 48dp non-overlapping hit area. Th
   Each test class reported 11 tests, zero failures/errors/skips. Debug APK:
   `app/build/outputs/apk/debug/app-debug.apk`. Existing crypto API deprecation
   warnings remain. No full unit suite or instrumented tests were run.
+
+## Finding 3 — bounded auth probe completion
+
+- `AuthLoginViewModel.probe()` now bounds its wait to 25 seconds and publishes
+  `probing = false` from `finally`. Timeout, cancellation, and unexpected failure
+  use `auth_login_error_unreachable`; completed certificate failures retain their
+  existing localized error/dialog. Reachable-dashboard result mapping is unchanged.
+- Shared probe-client lookup now happens on the IO worker, not during ViewModel
+  construction. The worker is activity-scope-owned, outside the timeout's children:
+  cancelling it does not wait for blocked initialization/body reads. Uninterruptible
+  work may remain on IO until it returns, but cannot hold the UI spinner or publish
+  a late result. Status/SPA cancellation is rethrown rather than swallowed.
+- Four regression tests use existing MockK/coroutines-test dependencies, including
+  virtual-time expiry while client lookup is blocked, successful retry, initialization
+  failure, scope cancellation, and SPA-fetch cancellation.
+- Final source verification:
+  `./gradlew ktlintCheck checkColorLiterals testDebugUnitTest --tests com.m57.hermescontrol.ui.authlogin.AuthLoginViewModelTest assembleDebug`
+  passed (`BUILD SUCCESSFUL in 11s`); 31 tests, zero failures/errors/skips.
+  APK: `app/build/outputs/apk/debug/app-debug.apk`.
+- Only the ViewModel, its existing test file, and this evidence note changed.
+  No emulator/adb, visual acceptance, push, or task-checkbox edits.

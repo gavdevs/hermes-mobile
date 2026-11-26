@@ -28,14 +28,17 @@ import com.m57.hermescontrol.data.session.ProfileSwitchCoordinator
 import com.m57.hermescontrol.data.tunnel.SshTunnelController
 import com.m57.hermescontrol.data.tunnel.SshTunnelState
 import com.m57.hermescontrol.ui.common.sshTunnelFailureMessage
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -146,10 +149,11 @@ class AuthLoginViewModel(
 
     companion object {
         private const val TAG = "AuthLoginVM"
+        private const val PROBE_TIMEOUT_MS = 25_000L
     }
 
-    private val probeClient: OkHttpClient =
-        com.m57.hermescontrol.data.remote.OkHttpProvider.probe
+    private val probeClient: OkHttpClient
+        get() = OkHttpProvider.probe
 
     internal val certificatePrompt = CertificatePromptController()
 
@@ -360,38 +364,53 @@ class AuthLoginViewModel(
             return
         }
 
-        _uiState.update { it.copy(probing = true, errorMessage = null, authMode = null) }
-
         viewModelScope.launch {
             var certificateFailure = false
-            val result =
-                withContext(Dispatchers.IO) {
+            var probeCompleted = false
+            var result: ProbeResult? = null
+            // LP3 finding 3: keep blocking client initialization/body reads outside the timed wait's children.
+            val probeJob =
+                viewModelScope.async(Dispatchers.IO) {
                     probeDashboardInternal(endpoint) { certificateFailure = true }
                 }
-            _uiState.update {
-                it.copy(
-                    probing = false,
-                    authMode = result?.authMode,
-                    providers = result?.providers.orEmpty(),
-                    selectedProvider = result?.selectedProvider,
-                    browserSupported = result?.browserSupported ?: true,
-                    token = result?.extractedToken ?: it.token,
-                    errorMessage =
-                        if (result == null) {
-                            app.getString(
-                                if (certificateFailure) {
-                                    R.string.mtls_prompt_connection_error
-                                } else {
-                                    R.string.auth_login_error_unreachable
-                                },
-                            )
-                        } else {
-                            null
-                        },
-                )
+            try {
+                _uiState.update { it.copy(probing = true, errorMessage = null, authMode = null) }
+                result =
+                    withTimeoutOrNull(PROBE_TIMEOUT_MS) {
+                        probeJob.await().also { probeCompleted = true }
+                    }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Dashboard probe failed: ${e.message}")
+            } finally {
+                probeJob.cancel()
+                val showCertificateFailure = probeCompleted && certificateFailure
+                _uiState.update {
+                    it.copy(
+                        probing = false,
+                        authMode = result?.authMode,
+                        providers = result?.providers.orEmpty(),
+                        selectedProvider = result?.selectedProvider,
+                        browserSupported = result?.browserSupported ?: true,
+                        token = result?.extractedToken ?: it.token,
+                        errorMessage =
+                            if (result == null) {
+                                app.getString(
+                                    if (showCertificateFailure) {
+                                        R.string.mtls_prompt_connection_error
+                                    } else {
+                                        R.string.auth_login_error_unreachable
+                                    },
+                                )
+                            } else {
+                                null
+                            },
+                    )
+                }
+                // Publish failure before offering the dialog so a fast save cannot be overwritten.
+                if (showCertificateFailure) certificatePrompt.offer(certificateAttempt, endpoint.baseUrl)
             }
-            // Publish the failed probe state before offering the dialog so a fast save cannot be overwritten by it.
-            if (certificateFailure) certificatePrompt.offer(certificateAttempt, endpoint.baseUrl)
         }
     }
 
@@ -447,6 +466,8 @@ class AuthLoginViewModel(
         val info =
             try {
                 probeGatewayAuth(probeClient, endpoint)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 if (isClientCertificateAuthenticationFailure(endpoint.baseUrl, e)) {
                     onCertificateFailure()
@@ -469,6 +490,8 @@ class AuthLoginViewModel(
                 val body = spaResp.body.string()
                 val tokenMatch = Regex("""__HERMES_SESSION_TOKEN__\s*=\s*"([^"]+)"""").find(body)
                 extractedToken = tokenMatch?.groupValues?.getOrNull(1)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.w(TAG, "SPA token extraction failed: ${e.message}")
             }

@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.util.Log
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewModelScope
 import com.m57.hermescontrol.R
 import com.m57.hermescontrol.data.config.ConnectionProfile
 import com.m57.hermescontrol.data.local.AuthManager
@@ -25,13 +26,21 @@ import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import io.mockk.verify
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.job
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -41,9 +50,12 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.io.IOException
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AuthLoginViewModelTest {
@@ -256,6 +268,104 @@ class AuthLoginViewModelTest {
         assertNull(state.authMode)
         assertEquals("Dashboard unreachable", state.errorMessage)
     }
+
+    @Test
+    fun `blocked client initialization times out and a later probe can succeed`() =
+        runTest {
+            val started = CompletableDeferred<Unit>()
+            val release = CountDownLatch(1)
+            every { OkHttpProvider.probe } answers {
+                started.complete(Unit)
+                check(release.await(5, TimeUnit.SECONDS))
+                mockProbeClient
+            }
+            viewModel = AuthLoginViewModel(app)
+            val call = mockk<okhttp3.Call>()
+            every { mockProbeClient.newCall(any()) } returns call
+            coEvery { call.await() } throws IOException("offline")
+            try {
+                viewModel.probe()
+                runBlocking { withTimeout(5_000) { started.await() } }
+                assertTrue(viewModel.uiState.value.probing)
+                advanceTimeBy(25_000)
+                runCurrent()
+                val state = viewModel.uiState.value
+                assertFalse(state.probing)
+                assertNull(state.authMode)
+                assertEquals("Dashboard unreachable", state.errorMessage)
+            } finally {
+                release.countDown()
+                runBlocking {
+                    withTimeout(5_000) {
+                        viewModel.viewModelScope.coroutineContext.job.children
+                            .toList()
+                            .joinAll()
+                    }
+                }
+            }
+
+            every { OkHttpProvider.probe } returns mockProbeClient
+            val status = mockk<Response>(relaxed = true)
+            every { status.isSuccessful } returns true
+            every { status.body.string() } returns """{"auth_required":false}"""
+            val homepage = mockk<Response>(relaxed = true)
+            every { homepage.body.string() } returns """window.__HERMES_SESSION_TOKEN__="retry-token";"""
+            coEvery { call.await() } returnsMany listOf(status, homepage)
+            viewModel.probe()
+            val retried = runBlocking { withTimeout(5_000) { viewModel.uiState.first { !it.probing } } }
+            assertEquals(DashboardAuthMode.TOKEN_ONLY, retried.authMode)
+            assertEquals("retry-token", retried.token)
+            assertNull(retried.errorMessage)
+        }
+
+    @Test
+    fun `client initialization exception clears probing`() =
+        runBlocking {
+            every { OkHttpProvider.probe } throws IllegalStateException("cookie jar unavailable")
+            viewModel.probe()
+            val state = withTimeout(5_000) { viewModel.uiState.first { !it.probing } }
+            assertEquals("Dashboard unreachable", state.errorMessage)
+            assertNull(state.authMode)
+        }
+
+    @Test
+    fun `scope cancellation clears probing and reports unreachable`() =
+        runBlocking {
+            val started = CompletableDeferred<Unit>()
+            val call = mockk<okhttp3.Call>()
+            every { mockProbeClient.newCall(any()) } returns call
+            coEvery { call.await() } coAnswers {
+                started.complete(Unit)
+                awaitCancellation()
+            }
+            viewModel.probe()
+            withTimeout(5_000) { started.await() }
+            assertTrue(viewModel.uiState.value.probing)
+            viewModel.viewModelScope.cancel()
+            val state = withTimeout(5_000) { viewModel.uiState.first { !it.probing } }
+            assertEquals("Dashboard unreachable", state.errorMessage)
+            assertNull(state.authMode)
+        }
+
+    @Test
+    fun `SPA token fetch cancellation is not treated as a successful probe`() =
+        runBlocking {
+            val statusCall = mockk<okhttp3.Call>()
+            val homepageCall = mockk<okhttp3.Call>()
+            every { mockProbeClient.newCall(match { it.url.encodedPath == "/api/status" }) } returns statusCall
+            every { mockProbeClient.newCall(match { it.url.encodedPath == "/" }) } returns homepageCall
+            val status = mockk<Response>(relaxed = true)
+            every { status.isSuccessful } returns true
+            every { status.body.string() } returns """{"auth_required":false}"""
+            coEvery { statusCall.await() } returns status
+            coEvery { homepageCall.await() } throws CancellationException("cancelled")
+            viewModel.onTokenChange("keep-token")
+            viewModel.probe()
+            val state = withTimeout(5_000) { viewModel.uiState.first { !it.probing } }
+            assertEquals("Dashboard unreachable", state.errorMessage)
+            assertNull(state.authMode)
+            assertEquals("keep-token", state.token)
+        }
 
     @Test
     fun `probe when status probe returns unsuccessful updates error state`() {
