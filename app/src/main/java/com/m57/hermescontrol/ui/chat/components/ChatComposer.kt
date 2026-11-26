@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -63,6 +64,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layoutId
@@ -94,8 +97,8 @@ import com.m57.hermescontrol.ui.common.ExpressiveIconButton as IconButton
 import com.m57.hermescontrol.ui.common.ExpressiveLinearProgressIndicator as LinearProgressIndicator
 
 /**
- * The chat input bar: a single rounded card with the input on top and a
- * controls row (attach, model/reasoning pill, mic, send) inside it below.
+ * The chat input bar: a rounded card on regular layouts, an underline on compact.
+ * Field, attachment surfaces and gesture-owning controls are shared between both.
  */
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
@@ -237,16 +240,15 @@ fun ChatInputBar(
             enter = slideInVertically(initialOffsetY = { it }),
             exit = slideOutVertically(targetOffsetY = { it }),
         ) {
-            // One floating card holds the whole composer: suggestions, attachments,
-            // the input and the controls row. Flat fill, hairline edge, no shadow.
+            // Only the outer chrome flattens on compact; nested attachment surfaces retain their styling.
             Surface(
                 modifier =
                     Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 8.dp),
-                shape = MaterialTheme.shapes.large,
-                color = palette.card,
-                border = BorderStroke(width = 1.dp, color = palette.cardBorder),
+                shape = if (compact) RectangleShape else MaterialTheme.shapes.large,
+                color = if (compact) Color.Transparent else palette.card,
+                border = if (compact) null else BorderStroke(width = 1.dp, color = palette.cardBorder),
             ) {
                 ComposerContent(showSecondaryAction = composerShowSend && (composerCanInterrupt || isListening)) {
                     if (isReceivingContent) {
@@ -493,6 +495,14 @@ fun ChatInputBar(
                                 )
                             }
                         }
+                    }
+
+                    if (compact) {
+                        HorizontalDivider(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                            thickness = 1.dp,
+                            color = palette.cardBorder,
+                        )
                     }
 
                     // ── BOTTOM ROW: Toolbar ──

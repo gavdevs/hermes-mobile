@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -49,6 +50,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -138,6 +140,14 @@ fun ComposerToolbar(
     onStopGeneration: () -> Unit = {},
 ) {
     val compact = LocalCompactLayout.current
+    val controlSize = if (compact) 40.dp else ControlSize
+    // Compact slots follow the visual width; Material's 48dp minimum extends around each visual.
+    val controlModifier =
+        Modifier
+            .width(controlSize)
+            .wrapContentWidth(unbounded = true)
+            .minimumInteractiveComponentSize()
+            .size(controlSize)
     var showReasoningMenu by remember { mutableStateOf(false) }
     val palette = composerPalette()
     val reasoningDisabledForModel = supportsReasoning == false
@@ -520,7 +530,7 @@ fun ComposerToolbar(
                     shapes = IconButtonDefaults.shapes(),
                     enabled = isConnected,
                     colors = flatIconButtonColors(palette),
-                    modifier = Modifier.size(ControlSize).testTag("attachment_button"),
+                    modifier = controlModifier.testTag("attachment_button"),
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
@@ -550,10 +560,7 @@ fun ComposerToolbar(
                             onClick = onStopGeneration,
                             shapes = IconButtonDefaults.shapes(),
                             colors = flatIconButtonColors(palette),
-                            modifier =
-                                Modifier
-                                    .size(ControlSize)
-                                    .testTag("stop_button"),
+                            modifier = controlModifier.testTag("stop_button"),
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Stop,
@@ -569,8 +576,7 @@ fun ComposerToolbar(
                         val micColors = if (isListening) listeningIconButtonColors() else flatIconButtonColors(palette)
                         Box(
                             modifier =
-                                Modifier
-                                    .size(ControlSize)
+                                controlModifier
                                     .clip(CircleShape)
                                     .background(
                                         if (isConnected) micColors.containerColor else micColors.disabledContainerColor,
@@ -632,8 +638,7 @@ fun ComposerToolbar(
                 val actionTint = if (actionEnabled) actionColors.contentColor else actionColors.disabledContentColor
                 Box(
                     modifier =
-                        Modifier
-                            .size(ControlSize)
+                        controlModifier
                             .clip(RoundedCornerShape(actionCorner))
                             .background(
                                 if (actionEnabled) actionColors.containerColor else actionColors.disabledContainerColor,

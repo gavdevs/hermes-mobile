@@ -35,7 +35,7 @@ private fun CompactComposerRow(
         val width = constraints.maxWidth
         val toolbarIndex = measurables.indexOfFirst { it.layoutId == CompactComposerPart.TOOLBAR }
         val inputIndex = measurables.indexOfFirst { it.layoutId == CompactComposerPart.INPUT }
-        val toolbarWidth = ((if (showSecondaryAction) 144 else 96).dp.roundToPx()).coerceAtMost(width)
+        val toolbarWidth = ((if (showSecondaryAction) 120 else 80).dp.roundToPx()).coerceAtMost(width)
         val placeables = arrayOfNulls<Placeable>(measurables.size)
         val childConstraints = constraints.copy(minHeight = 0)
         for (index in measurables.indices) {
