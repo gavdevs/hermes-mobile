@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -59,6 +60,7 @@ import com.m57.hermescontrol.data.remote.ClientCertificates
 import com.m57.hermescontrol.profilelock.LockedLandingContent
 import com.m57.hermescontrol.profilelock.ProfileLock
 import com.m57.hermescontrol.ui.common.CustomHeadersButton
+import com.m57.hermescontrol.ui.common.LocalCompactLayout
 import com.m57.hermescontrol.ui.common.SshTunnelButton
 import com.m57.hermescontrol.ui.common.ExpressiveButton as Button
 import com.m57.hermescontrol.ui.common.ExpressiveCircularProgressIndicator as CircularProgressIndicator
@@ -139,22 +141,9 @@ fun AuthLoginScreen(
 
     var passwordVisible by remember { mutableStateOf(false) }
 
-    Box(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .imePadding(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp, vertical = 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
+    AuthLoginLayout(
+        modifier = modifier,
+        form = {
             Box(
                 modifier = Modifier.size(64.dp),
                 contentAlignment = Alignment.Center,
@@ -421,7 +410,8 @@ fun AuthLoginScreen(
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-
+        },
+        action = {
             // Connect / Probe button
             Button(
                 onClick = {
@@ -441,7 +431,10 @@ fun AuthLoginScreen(
                         }
                     }
                 },
-                modifier = Modifier.fillMaxWidth().height(52.dp),
+                modifier =
+                    Modifier.fillMaxWidth().then(
+                        if (LocalCompactLayout.current) Modifier.heightIn(min = 48.dp) else Modifier.height(52.dp),
+                    ),
                 enabled =
                     !state.isLoading &&
                         !state.lanPermissionNeeded &&
@@ -486,6 +479,6 @@ fun AuthLoginScreen(
                     Text(stringResource(R.string.action_cancel))
                 }
             }
-        }
-    }
+        },
+    )
 }
