@@ -182,3 +182,30 @@ The context meter's 2dp visual line reserves a 48dp non-overlapping hit area. Th
   APK: `app/build/outputs/apk/debug/app-debug.apk`.
 - Only the ViewModel, its existing test file, and this evidence note changed.
   No emulator/adb, visual acceptance, push, or task-checkbox edits.
+
+## Parent visual acceptance — 2026-11-26 (LP3 AVD, 1080x1240 @ 420dpi)
+
+Independently measured from screenshots on the fork's debug APK (`lp3` @ 08ce5440), signed into the
+real Hermes dashboard (loopback token mode). Screens live in `~/Projects/light/lp3-hermes-mobile-audit/after/`.
+
+| Surface / criterion | Before | After | Verdict |
+| --- | --- | --- | --- |
+| History list share of viewport (≥60%) | first row at y≈1048; 1 truncated row | first row at y≈255; list ≈860px = **69%**, 3 full rows | PASS |
+| History filters reachable ≤2 taps | 3 always-visible chip rows + search + stats | app bar search + filter icon; one sheet hosts every control; active-filter summary chip with X | PASS |
+| Empty composer height (≤72dp) | 315px ≈ 120dp | **122px ≈ 46dp** | PASS |
+| Composer contents | field + attach + model pill + context chip + mic | field + attach + mic only; model/effort in overflow; context hairline under bar | PASS |
+| Keyboard open: ≥3 conversation lines | 0 lines (composer card 315px) | app bar auto-hides; content ≈170px ≈ 3 line-heights (short last message shows 2 full text lines), full composer visible | PASS (at line-height budget; IME itself is 830px on this AVD) |
+| Drawer fits without scrolling | ~5.5 rows visible of 30+ | 4 curated rows + 3 collapsible groups, ~90px spare | PASS |
+| Every drawer destination ≤2 taps | 5+ scrolls | group expand in place; Automation→Kanban/Webhooks verified | PASS |
+| Login primary action inside safe area | button bounds y1093–1219, entirely behind nav bar | button y966–1086 fully visible, no scrolling | PASS |
+| Fresh install = AMOLED dark | light theme (AMOLED falls back in SYSTEM mode) | pure black landing + chat, monochrome | PASS (after fix 653b2bc7) |
+| Regular phones unchanged | — | at 1080x2400 the original tall composer with model pill renders | PASS |
+| Auth probe never hangs | infinite "Probing dashboard…" | 25s watchdog → honest "Dashboard unreachable" error, retry works | PASS (after fix 08ce5440) |
+
+Notes:
+- The auth screen's primary button reads "Probing dashboard…" whenever `authMode == null`, which is
+  also the idle pre-probe state — misleading label, upstream, not fixed here (M2 candidate).
+- Reaching `Connect` on the AVD required pressing the action button explicitly (there is no
+  auto-probe); once pressed, loopback token extraction succeeded and the app signed in.
+- Known upstream quirk left alone: with a fresh install the app shows the misleading probing label
+  until the first explicit press.
