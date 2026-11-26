@@ -108,6 +108,7 @@ import com.m57.hermescontrol.ui.common.EmptyState
 import com.m57.hermescontrol.ui.common.ErrorState
 import com.m57.hermescontrol.ui.common.HermesIconButton
 import com.m57.hermescontrol.ui.common.HermesScaffold
+import com.m57.hermescontrol.ui.common.LocalCompactLayout
 import com.m57.hermescontrol.ui.common.NavIcon
 import com.m57.hermescontrol.ui.common.SearchBar
 import com.m57.hermescontrol.ui.common.SkeletonListState
@@ -117,12 +118,16 @@ import com.m57.hermescontrol.ui.common.StatusBadgeType
 import com.m57.hermescontrol.ui.common.ToastEffect
 import com.m57.hermescontrol.ui.common.listItemSpacing
 import com.m57.hermescontrol.ui.sessions.components.BranchRow
+import com.m57.hermescontrol.ui.sessions.components.CompactSessionsActions
+import com.m57.hermescontrol.ui.sessions.components.CompactSessionsHeader
 import com.m57.hermescontrol.ui.sessions.components.PinnedSectionHeader
 import com.m57.hermescontrol.ui.sessions.components.ProjectGroupHeader
 import com.m57.hermescontrol.ui.sessions.components.SearchResultCard
 import com.m57.hermescontrol.ui.sessions.components.SessionCard
 import com.m57.hermescontrol.ui.sessions.components.SessionsBulkActionBar
 import com.m57.hermescontrol.ui.sessions.components.SessionsDialogs
+import com.m57.hermescontrol.ui.sessions.components.SessionsFilterControls
+import com.m57.hermescontrol.ui.sessions.components.SessionsFilterSheet
 import com.m57.hermescontrol.ui.sessions.components.SessionsStatsRow
 import com.m57.hermescontrol.ui.sessions.components.automationGroups
 import com.m57.hermescontrol.ui.sessions.components.sourceLabel
@@ -216,6 +221,8 @@ fun SessionsScreen(
     val primaryContainer = MaterialTheme.colorScheme.primaryContainer
     val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
 
+    val compact = LocalCompactLayout.current
+    var showCompactFilters by remember { mutableStateOf(false) }
     var expandedAutomationGroups by remember { mutableStateOf(emptySet<String>()) }
 
     val sessionsToDisplay =
@@ -523,6 +530,10 @@ fun SessionsScreen(
         )
     }
 
+    if (compact && showCompactFilters) {
+        SessionsFilterSheet(state, viewModel, onDismiss = { showCompactFilters = false })
+    }
+
     HermesScaffold(
         title = { Text(stringResource(R.string.screen_history)) },
         snackbarHost = {
@@ -534,33 +545,37 @@ fun SessionsScreen(
         },
         navigationIcon = onOpenDrawer?.let { NavIcon.Menu(it) },
         isRefreshing = state.isLoading,
-        onRefresh = { viewModel.loadSessions(forceRefresh = true) },
+        onRefresh = if (compact) null else ({ viewModel.loadSessions(forceRefresh = true) }),
         actions = {
-            HermesIconButton(
-                imageVector = Icons.Filled.Add,
-                label = stringResource(R.string.content_desc_new_chat),
-                onClick = { NavigationController.openNewChat() },
-                modifier = Modifier.testTag("sessions_action_new_chat"),
-            )
-            if (state.hasHiddenSessions) {
+            if (compact) {
+                CompactSessionsActions(state, viewModel, onShowFilters = { showCompactFilters = true })
+            } else {
                 HermesIconButton(
-                    imageVector =
-                        if (state.showHidden) {
-                            Icons.Filled.VisibilityOff
-                        } else {
-                            Icons.Filled.Visibility
-                        },
-                    label =
-                        stringResource(
-                            if (state.showHidden) {
-                                R.string.sessions_hide_hidden
-                            } else {
-                                R.string.sessions_show_hidden
-                            },
-                        ),
-                    onClick = { viewModel.toggleShowHidden() },
-                    modifier = Modifier.testTag("sessions_action_toggle_hidden"),
+                    imageVector = Icons.Filled.Add,
+                    label = stringResource(R.string.content_desc_new_chat),
+                    onClick = { NavigationController.openNewChat() },
+                    modifier = Modifier.testTag("sessions_action_new_chat"),
                 )
+                if (state.hasHiddenSessions) {
+                    HermesIconButton(
+                        imageVector =
+                            if (state.showHidden) {
+                                Icons.Filled.VisibilityOff
+                            } else {
+                                Icons.Filled.Visibility
+                            },
+                        label =
+                            stringResource(
+                                if (state.showHidden) {
+                                    R.string.sessions_hide_hidden
+                                } else {
+                                    R.string.sessions_show_hidden
+                                },
+                            ),
+                        onClick = { viewModel.toggleShowHidden() },
+                        modifier = Modifier.testTag("sessions_action_toggle_hidden"),
+                    )
+                }
             }
         },
         modifier = modifier,
@@ -587,141 +602,10 @@ fun SessionsScreen(
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 }
             }
-            LazyRow(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = spacing.sm),
-                contentPadding = PaddingValues(horizontal = spacing.md),
-                horizontalArrangement = Arrangement.spacedBy(spacing.sm),
-            ) {
-                item {
-                    FilterChip(
-                        selected = state.section == HistorySection.CONVERSATIONS,
-                        onClick = { viewModel.selectSection(HistorySection.CONVERSATIONS) },
-                        label = { Text(stringResource(R.string.sessions_tab_conversations)) },
-                        modifier = Modifier.testTag("history_tab_conversations"),
-                    )
-                }
-                item {
-                    FilterChip(
-                        selected = state.section == HistorySection.AUTOMATIONS,
-                        onClick = { viewModel.selectSection(HistorySection.AUTOMATIONS) },
-                        label = { Text(stringResource(R.string.sessions_tab_automations)) },
-                        modifier = Modifier.testTag("history_tab_automations"),
-                    )
-                }
-                item {
-                    FilterChip(
-                        selected = state.showArchived,
-                        onClick = { viewModel.toggleShowArchived() },
-                        label = { Text(stringResource(R.string.sessions_tab_archived)) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = if (state.showArchived) Icons.Filled.Unarchive else Icons.Filled.Archive,
-                                contentDescription = null,
-                                modifier = Modifier.size(FilterChipDefaults.IconSize),
-                            )
-                        },
-                        modifier = Modifier.testTag("sessions_action_toggle_archived"),
-                    )
-                }
-            }
-
-            // Source chips: hidden until a loaded row actually carries that source.
-            val sources = state.availableSources
-            if (sources.size > 1) {
-                LazyRow(
-                    modifier = Modifier.fillMaxWidth().testTag("history_source_chips"),
-                    contentPadding = PaddingValues(horizontal = spacing.md),
-                    horizontalArrangement = Arrangement.spacedBy(spacing.sm),
-                ) {
-                    items(sources, key = { it }) { source ->
-                        FilterChip(
-                            selected = state.activeSourceFilter == source,
-                            onClick = { viewModel.selectSourceFilter(source) },
-                            label = { Text(sourceLabel(source)) },
-                            modifier = Modifier.testTag("history_source_chip_$source"),
-                        )
-                    }
-                }
-            }
-
-            // Project chips (issue #1526): only for projects present in the rows currently shown.
-            val projectChoices = state.availableProjects
-            if (state.section == HistorySection.CONVERSATIONS && projectChoices.size > 1) {
-                LazyRow(
-                    modifier = Modifier.fillMaxWidth().testTag("history_project_chips"),
-                    contentPadding = PaddingValues(horizontal = spacing.md),
-                    horizontalArrangement = Arrangement.spacedBy(spacing.sm),
-                ) {
-                    item(key = "group_toggle") {
-                        FilterChip(
-                            selected = state.groupByProject,
-                            onClick = { viewModel.toggleGroupByProject() },
-                            label = { Text(stringResource(R.string.sessions_group_by_project)) },
-                            modifier = Modifier.testTag("history_group_by_project"),
-                        )
-                    }
-                    items(projectChoices, key = { "project_${it.key}" }) { choice ->
-                        FilterChip(
-                            selected = state.activeProjectFilter == choice.key,
-                            onClick = { viewModel.selectProjectFilter(choice.key) },
-                            label = {
-                                Text(
-                                    if (choice.key == NO_PROJECT_KEY) {
-                                        stringResource(R.string.sessions_project_none)
-                                    } else {
-                                        choice.key
-                                    },
-                                )
-                            },
-                            modifier = Modifier.testTag("history_project_chip_${choice.key}"),
-                        )
-                    }
-                }
-            }
-
-            // ── Search + bulk toggle (always visible) ─────────────
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = spacing.md, vertical = spacing.sm),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                SearchBar(
-                    query = state.searchQuery,
-                    onQueryChange = { viewModel.setSearchQuery(it) },
-                    placeholder = stringResource(R.string.sessions_search_placeholder),
-                    modifier = Modifier.weight(1f),
-                )
-                Spacer(modifier = Modifier.width(spacing.sm))
-                // This API operates on all history, so do not present it as scoped
-                // to the Automations tab.
-                if (state.section == HistorySection.CONVERSATIONS) {
-                    BadgedBox(
-                        badge = {
-                            if (state.emptyCount > 0) {
-                                Badge { Text("${state.emptyCount}") }
-                            }
-                        },
-                    ) {
-                        FilledTonalButton(
-                            onClick = { viewModel.requestEmptyCleanup() },
-                            enabled = state.emptyCount > 0,
-                            contentPadding = PaddingValues(horizontal = spacing.md, vertical = 8.dp),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.DeleteSweep,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                            )
-                            Spacer(modifier = Modifier.width(spacing.xs))
-                            Text(stringResource(R.string.sessions_empty_cleanup_desc))
-                        }
-                    }
-                }
+            if (compact) {
+                CompactSessionsHeader(state, viewModel, onShowFilters = { showCompactFilters = true })
+            } else {
+                SessionsFilterControls(state, viewModel)
             }
 
             // List/state area takes all remaining height below the search bar.
@@ -938,14 +822,16 @@ fun SessionsScreen(
                                 )
                             }
                             // ── Stats row ───────────────────────────────────────
-                            SessionsStatsRow(
-                                total = state.total,
-                                loadedMessageCount = loadedMessageCount,
-                                section = state.section,
-                                spacing = spacing,
-                                statusColors = statusColors,
-                                onPruneClick = { viewModel.showPruneDialog() },
-                            )
+                            if (!compact) {
+                                SessionsStatsRow(
+                                    total = state.total,
+                                    loadedMessageCount = loadedMessageCount,
+                                    section = state.section,
+                                    spacing = spacing,
+                                    statusColors = statusColors,
+                                    onPruneClick = { viewModel.showPruneDialog() },
+                                )
+                            }
 
                             // ── Session list ────────────────────────────────────
                             val listState = rememberLazyListState()

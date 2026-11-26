@@ -1,0 +1,8 @@
+<resources>
+    <string name="compact_sessions_filters">Filters</string>
+    <string name="compact_sessions_summary">Filters: %1$s</string>
+    <string name="compact_model_label">Model: %1$s</string>
+    <string name="compact_drawer_automation">Automation</string>
+    <string name="compact_drawer_configure">Configure</string>
+    <string name="compact_drawer_develop">Develop</string>
+</resources>
