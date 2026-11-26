@@ -13,6 +13,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.platform.LocalContext
 import com.m57.hermescontrol.theme.presets.DefaultTheme
+import com.m57.hermescontrol.ui.common.LocalCompactLayout
+import com.m57.hermescontrol.ui.common.rememberCompactLayout
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -93,6 +95,7 @@ fun HermesControlTheme(
         LocalHermesStatusColors provides statusColors,
         LocalSpacing provides SpacingDefaults,
         LocalMotion provides MotionDefaults,
+        LocalCompactLayout provides rememberCompactLayout(),
     ) {
         MaterialExpressiveTheme(
             colorScheme = colorScheme,
