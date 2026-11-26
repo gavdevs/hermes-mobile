@@ -43,6 +43,7 @@ import com.m57.hermescontrol.ui.chat.UserBubble
 import com.m57.hermescontrol.ui.chat.components.ChatHistoryPrefetch
 import com.m57.hermescontrol.ui.chat.components.ChatScrollController
 import com.m57.hermescontrol.ui.chat.components.ClarifyBubble
+import com.m57.hermescontrol.ui.chat.components.CompactChatEmptyState
 import com.m57.hermescontrol.ui.chat.components.MessageReactionChips
 import com.m57.hermescontrol.ui.chat.components.ReasoningCard
 import com.m57.hermescontrol.ui.chat.components.VaultCodeCard
@@ -50,6 +51,7 @@ import com.m57.hermescontrol.ui.chat.components.VaultSaveLoginCard
 import com.m57.hermescontrol.ui.chat.components.VaultUnlockCard
 import com.m57.hermescontrol.ui.chat.toolCallMilestones
 import com.m57.hermescontrol.ui.common.EmptyState
+import com.m57.hermescontrol.ui.common.LocalCompactLayout
 import com.m57.hermescontrol.ui.common.ExpressiveCircularProgressIndicator as CircularProgressIndicator
 
 private object FullBleedContentType {
@@ -129,10 +131,14 @@ fun FullBleedChatList(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
-            EmptyState(
-                title = stringResource(R.string.chat_empty_title),
-                subtitle = stringResource(R.string.chat_empty_subtitle),
-            )
+            if (LocalCompactLayout.current) {
+                CompactChatEmptyState()
+            } else {
+                EmptyState(
+                    title = stringResource(R.string.chat_empty_title),
+                    subtitle = stringResource(R.string.chat_empty_subtitle),
+                )
+            }
         }
     } else {
         // Keep only the incoming older prefix out of layout during a drag/fling.

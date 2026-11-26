@@ -65,6 +65,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -87,6 +88,7 @@ import com.m57.hermescontrol.data.ws.CommandCatalog
 import com.m57.hermescontrol.ui.chat.ChatInputPolicy
 import com.m57.hermescontrol.ui.chat.canOptimizePhoto
 import com.m57.hermescontrol.ui.common.BotAvatar
+import com.m57.hermescontrol.ui.common.LocalCompactLayout
 import com.m57.hermescontrol.util.BidiUtils
 import com.m57.hermescontrol.ui.common.ExpressiveIconButton as IconButton
 import com.m57.hermescontrol.ui.common.ExpressiveLinearProgressIndicator as LinearProgressIndicator
@@ -141,6 +143,7 @@ fun ChatInputBar(
     receiveContentListener: ReceiveContentListener? = null,
     isReceivingContent: Boolean = false,
 ) {
+    val compact = LocalCompactLayout.current
     val inputText = inputState.text.toString()
     // Allow sending while the agent is mid-turn or awaiting approval: the
     // gateway's prompt.submit busy-input policy queues it as the next turn
@@ -245,7 +248,7 @@ fun ChatInputBar(
                 color = palette.card,
                 border = BorderStroke(width = 1.dp, color = palette.cardBorder),
             ) {
-                Column(modifier = Modifier.padding(top = 8.dp, bottom = 10.dp)) {
+                ComposerContent(showSecondaryAction = composerShowSend && (composerCanInterrupt || isListening)) {
                     if (isReceivingContent) {
                         val loadingLabel = stringResource(R.string.chat_image_paste_loading)
                         LinearProgressIndicator(
@@ -357,7 +360,13 @@ fun ChatInputBar(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 4.dp),
+                                .then(
+                                    if (compact) {
+                                        Modifier.layoutId(CompactComposerPart.INPUT)
+                                    } else {
+                                        Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
+                                    },
+                                ),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         val placeholderText =
@@ -507,7 +516,10 @@ fun ChatInputBar(
                         onMicLock = onMicLock,
                         isVoiceNoteLocked = isVoiceNoteLocked,
                         onSlideProgress = { voiceSlideProgress.value = it },
-                        modifier = Modifier.testTag("chat_composer_toolbar"),
+                        modifier =
+                            Modifier.testTag("chat_composer_toolbar").then(
+                                if (compact) Modifier.layoutId(CompactComposerPart.TOOLBAR) else Modifier,
+                            ),
                         canDisableReasoning = canDisableReasoning,
                         supportsReasoning = supportsReasoning,
                         fastMode = fastMode,

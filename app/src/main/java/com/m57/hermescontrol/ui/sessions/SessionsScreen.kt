@@ -126,7 +126,6 @@ import com.m57.hermescontrol.ui.sessions.components.SearchResultCard
 import com.m57.hermescontrol.ui.sessions.components.SessionCard
 import com.m57.hermescontrol.ui.sessions.components.SessionsBulkActionBar
 import com.m57.hermescontrol.ui.sessions.components.SessionsDialogs
-import com.m57.hermescontrol.ui.sessions.components.SessionsFilterControls
 import com.m57.hermescontrol.ui.sessions.components.SessionsFilterSheet
 import com.m57.hermescontrol.ui.sessions.components.SessionsStatsRow
 import com.m57.hermescontrol.ui.sessions.components.automationGroups
@@ -605,7 +604,143 @@ fun SessionsScreen(
             if (compact) {
                 CompactSessionsHeader(state, viewModel, onShowFilters = { showCompactFilters = true })
             } else {
-                SessionsFilterControls(state, viewModel)
+                LazyRow(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = spacing.sm),
+                    contentPadding = PaddingValues(horizontal = spacing.md),
+                    horizontalArrangement = Arrangement.spacedBy(spacing.sm),
+                ) {
+                    item {
+                        FilterChip(
+                            selected = state.section == HistorySection.CONVERSATIONS,
+                            onClick = { viewModel.selectSection(HistorySection.CONVERSATIONS) },
+                            label = { Text(stringResource(R.string.sessions_tab_conversations)) },
+                            modifier = Modifier.testTag("history_tab_conversations"),
+                        )
+                    }
+                    item {
+                        FilterChip(
+                            selected = state.section == HistorySection.AUTOMATIONS,
+                            onClick = { viewModel.selectSection(HistorySection.AUTOMATIONS) },
+                            label = { Text(stringResource(R.string.sessions_tab_automations)) },
+                            modifier = Modifier.testTag("history_tab_automations"),
+                        )
+                    }
+                    item {
+                        FilterChip(
+                            selected = state.showArchived,
+                            onClick = { viewModel.toggleShowArchived() },
+                            label = { Text(stringResource(R.string.sessions_tab_archived)) },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector =
+                                        if (state.showArchived) Icons.Filled.Unarchive else Icons.Filled.Archive,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(FilterChipDefaults.IconSize),
+                                )
+                            },
+                            modifier = Modifier.testTag("sessions_action_toggle_archived"),
+                        )
+                    }
+                }
+
+                // Source chips: hidden until a loaded row actually carries that source.
+                val sources = state.availableSources
+                if (sources.size > 1) {
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth().testTag("history_source_chips"),
+                        contentPadding = PaddingValues(horizontal = spacing.md),
+                        horizontalArrangement = Arrangement.spacedBy(spacing.sm),
+                    ) {
+                        items(sources, key = { it }) { source ->
+                            FilterChip(
+                                selected = state.activeSourceFilter == source,
+                                onClick = { viewModel.selectSourceFilter(source) },
+                                label = { Text(sourceLabel(source)) },
+                                modifier = Modifier.testTag("history_source_chip_$source"),
+                            )
+                        }
+                    }
+                }
+
+                // Project chips (issue #1526): only for projects present in the rows currently shown.
+                val projectChoices = state.availableProjects
+                if (state.section == HistorySection.CONVERSATIONS && projectChoices.size > 1) {
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth().testTag("history_project_chips"),
+                        contentPadding = PaddingValues(horizontal = spacing.md),
+                        horizontalArrangement = Arrangement.spacedBy(spacing.sm),
+                    ) {
+                        item(key = "group_toggle") {
+                            FilterChip(
+                                selected = state.groupByProject,
+                                onClick = { viewModel.toggleGroupByProject() },
+                                label = { Text(stringResource(R.string.sessions_group_by_project)) },
+                                modifier = Modifier.testTag("history_group_by_project"),
+                            )
+                        }
+                        items(projectChoices, key = { "project_${it.key}" }) { choice ->
+                            FilterChip(
+                                selected = state.activeProjectFilter == choice.key,
+                                onClick = { viewModel.selectProjectFilter(choice.key) },
+                                label = {
+                                    Text(
+                                        if (choice.key == NO_PROJECT_KEY) {
+                                            stringResource(R.string.sessions_project_none)
+                                        } else {
+                                            choice.key
+                                        },
+                                    )
+                                },
+                                modifier = Modifier.testTag("history_project_chip_${choice.key}"),
+                            )
+                        }
+                    }
+                }
+
+                // ── Search + bulk toggle (always visible) ─────────────
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = spacing.md, vertical = spacing.sm),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    SearchBar(
+                        query = state.searchQuery,
+                        onQueryChange = { viewModel.setSearchQuery(it) },
+                        placeholder = stringResource(R.string.sessions_search_placeholder),
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(modifier = Modifier.width(spacing.sm))
+                    // This API operates on all history, so do not present it as scoped
+                    // to the Automations tab.
+                    if (state.section == HistorySection.CONVERSATIONS) {
+                        BadgedBox(
+                            badge = {
+                                if (state.emptyCount > 0) {
+                                    Badge { Text("${state.emptyCount}") }
+                                }
+                            },
+                        ) {
+                            FilledTonalButton(
+                                onClick = { viewModel.requestEmptyCleanup() },
+                                enabled = state.emptyCount > 0,
+                                contentPadding = PaddingValues(horizontal = spacing.md, vertical = 8.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.DeleteSweep,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Spacer(modifier = Modifier.width(spacing.xs))
+                                Text(stringResource(R.string.sessions_empty_cleanup_desc))
+                            }
+                        }
+                    }
+                }
             }
 
             // List/state area takes all remaining height below the search bar.

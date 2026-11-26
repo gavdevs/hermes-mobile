@@ -78,6 +78,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.text.BidiFormatter
 import com.m57.hermescontrol.R
 import com.m57.hermescontrol.applock.DropdownMenu
+import com.m57.hermescontrol.ui.common.LocalCompactLayout
 import kotlinx.coroutines.withTimeoutOrNull
 import com.m57.hermescontrol.ui.common.ExpressiveCircularProgressIndicator as CircularProgressIndicator
 import com.m57.hermescontrol.ui.common.ExpressiveSwitch as Switch
@@ -136,6 +137,7 @@ fun ComposerToolbar(
     onSlideProgress: (Float) -> Unit = {},
     onStopGeneration: () -> Unit = {},
 ) {
+    val compact = LocalCompactLayout.current
     var showReasoningMenu by remember { mutableStateOf(false) }
     val palette = composerPalette()
     val reasoningDisabledForModel = supportsReasoning == false
@@ -497,7 +499,7 @@ fun ComposerToolbar(
     BoxWithConstraints(modifier = modifier.fillMaxWidth().testTag("composer_toolbar")) {
         // Use the worst-case action count so starting a draft/recording never
         // moves the gesture owner between rows. Only width/font changes adapt.
-        val separateModelRow = maxWidth < 192.dp + 136.dp * LocalDensity.current.fontScale
+        val separateModelRow = !compact && maxWidth < 192.dp + 136.dp * LocalDensity.current.fontScale
         Column {
             if (separateModelRow) {
                 Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(top = 6.dp)) {
@@ -508,10 +510,10 @@ fun ComposerToolbar(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp)
-                        .padding(top = 6.dp),
+                        .padding(horizontal = if (compact) 0.dp else 12.dp)
+                        .padding(top = if (compact) 0.dp else 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(if (compact) 0.dp else 8.dp),
             ) {
                 FilledIconButton(
                     onClick = onAttachTap,
@@ -526,9 +528,9 @@ fun ComposerToolbar(
                     )
                 }
 
-                if (!separateModelRow) {
+                if (!compact && !separateModelRow) {
                     Box(Modifier.weight(1f)) { modelControl() }
-                } else {
+                } else if (!compact) {
                     Spacer(Modifier.weight(1f))
                 }
 
@@ -539,7 +541,7 @@ fun ComposerToolbar(
                 // here and the action button is a disabled send: Stop must not appear
                 // when there is nothing to interrupt (review, PR #1250).
                 AnimatedVisibility(
-                    visible = showSend,
+                    visible = showSend && (!compact || canInterrupt || isListening),
                     enter = fadeIn() + scaleIn(initialScale = 0.8f),
                     exit = fadeOut() + scaleOut(targetScale = 0.8f),
                 ) {

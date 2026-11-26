@@ -5,4 +5,12 @@
     <string name="compact_drawer_automation">Automation</string>
     <string name="compact_drawer_configure">Configure</string>
     <string name="compact_drawer_develop">Develop</string>
+    <string name="compact_reasoning_none">None</string>
+    <string name="compact_reasoning_minimal">Minimal</string>
+    <string name="compact_reasoning_low">Low</string>
+    <string name="compact_reasoning_medium">Medium</string>
+    <string name="compact_reasoning_high">High</string>
+    <string name="compact_reasoning_xhigh">Extra high</string>
+    <string name="compact_reasoning_max">Max</string>
+    <string name="compact_reasoning_ultra">Ultra</string>
 </resources>

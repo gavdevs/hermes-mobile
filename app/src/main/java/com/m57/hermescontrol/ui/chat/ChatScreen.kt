@@ -118,6 +118,8 @@ import com.m57.hermescontrol.ui.chat.components.ChatResumeErrorOverlay
 import com.m57.hermescontrol.ui.chat.components.ChatScrollToBottomFab
 import com.m57.hermescontrol.ui.chat.components.ChatTimelineNoPrefetchStrategy
 import com.m57.hermescontrol.ui.chat.components.ChatTimelineSheet
+import com.m57.hermescontrol.ui.chat.components.CompactChatModelMenu
+import com.m57.hermescontrol.ui.chat.components.CompactContextUsage
 import com.m57.hermescontrol.ui.chat.components.ConnectionQuickSwitcherSheet
 import com.m57.hermescontrol.ui.chat.components.ConnectionSetupSheet
 import com.m57.hermescontrol.ui.chat.components.ContextDetailSheet
@@ -156,6 +158,7 @@ import com.m57.hermescontrol.ui.common.AutoScrollingTitleText
 import com.m57.hermescontrol.ui.common.CredentialWarningBanner
 import com.m57.hermescontrol.ui.common.HermesIconButton
 import com.m57.hermescontrol.ui.common.HermesScaffold
+import com.m57.hermescontrol.ui.common.LocalCompactLayout
 import com.m57.hermescontrol.ui.common.NavIcon
 import com.m57.hermescontrol.ui.common.ReadableContentMaxWidth
 import com.m57.hermescontrol.ui.model.components.ModelPickerDialog
@@ -666,6 +669,9 @@ fun ChatScreen(
                     val archiveUndoLabel = stringResource(R.string.sessions_undo_action)
                     val archiveUndoFailedMessage = stringResource(R.string.sessions_undo_failed)
 
+                    if (LocalCompactLayout.current) {
+                        CompactChatModelMenu(state, viewModel, onDismiss = { showSessionMenu = false })
+                    }
                     ChatOverflowMenuContent(
                         activeConnectionName = activeConnectionName,
                         profileLocked = profileLocked,
@@ -797,6 +803,12 @@ fun ChatScreen(
                     .wrapContentWidth(Alignment.CenterHorizontally)
                     .widthIn(max = ReadableContentMaxWidth),
         ) {
+            if (LocalCompactLayout.current) {
+                CompactContextUsage(state.usedContextTokens, state.fullContextTokens) {
+                    showContextSheet = true
+                    viewModel.fetchSessionDetailBreakdown()
+                }
+            }
             ChatConnectionBanner(
                 connectionStatus = state.connectionStatus,
                 onReconnect = viewModel::reconnect,
@@ -1064,15 +1076,17 @@ fun ChatScreen(
             // Context-window meter (used / full) — sits above the composer so it
             // stays visible while the session is active, grouped with the model
             // it belongs to without crowding the title or the control row.
-            ContextUsageChip(
-                usedTokens = state.usedContextTokens,
-                fullTokens = state.fullContextTokens,
-                compressionCount = state.compressionCount,
-                onClick = {
-                    showContextSheet = true
-                    viewModel.fetchSessionDetailBreakdown()
-                },
-            )
+            if (!LocalCompactLayout.current) {
+                ContextUsageChip(
+                    usedTokens = state.usedContextTokens,
+                    fullTokens = state.fullContextTokens,
+                    compressionCount = state.compressionCount,
+                    onClick = {
+                        showContextSheet = true
+                        viewModel.fetchSessionDetailBreakdown()
+                    },
+                )
+            }
 
             if (!timelineState.isHistorical) {
                 PendingSendRecovery(
