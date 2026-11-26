@@ -17,7 +17,7 @@ data class ServerStoreState(
     val lastOpenedSessionIds: Map<String, String> = emptyMap(),
     val themePreference: ThemePreference = ThemePreference.SYSTEM,
     val useDynamicColors: Boolean = false,
-    val themePreset: ThemePreset = ThemePreset.DEFAULT,
+    val themePreset: ThemePreset = ThemePreset.AMOLED,
     val connectionProfiles: List<ConnectionProfile> = emptyList(),
     val selectedProfileId: String? = null,
     val pinnedModels: List<PinnedModel> = emptyList(),

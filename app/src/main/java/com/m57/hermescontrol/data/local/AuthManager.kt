@@ -81,7 +81,7 @@ object AuthManager {
     private val _useDynamicColorsFlow = MutableStateFlow<Boolean>(false)
     val useDynamicColorsFlow: StateFlow<Boolean> = _useDynamicColorsFlow.asStateFlow()
 
-    private val _themePresetFlow = MutableStateFlow<ThemePreset>(ThemePreset.DEFAULT)
+    private val _themePresetFlow = MutableStateFlow<ThemePreset>(ThemePreset.AMOLED)
     val themePresetFlow: StateFlow<ThemePreset> = _themePresetFlow.asStateFlow()
 
     private val _chatFontScaleFlow = MutableStateFlow<Float>(1.0f)

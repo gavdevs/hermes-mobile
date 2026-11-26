@@ -1,5 +1,6 @@
 package com.m57.hermescontrol.data.config
 
+import com.m57.hermescontrol.theme.ThemePreset
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -9,6 +10,17 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ServerStoreTest {
+    @Test
+    fun forkPresetDefaultPreservesExplicitSavedChoices() {
+        val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+        assertEquals(ThemePreset.AMOLED, ServerStoreState().themePreset)
+        assertEquals(ThemePreset.AMOLED, json.decodeFromString<ServerStoreState>("{}").themePreset)
+        for (preset in ThemePreset.entries) {
+            val encoded = json.encodeToString(ServerStoreState.serializer(), ServerStoreState(themePreset = preset))
+            assertEquals(preset, json.decodeFromString<ServerStoreState>(encoded).themePreset)
+        }
+    }
+
     @Test
     fun keepScreenAwakeDefaultsOffAndRoundTrips() {
         val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }

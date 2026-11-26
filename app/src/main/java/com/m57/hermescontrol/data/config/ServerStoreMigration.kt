@@ -57,10 +57,10 @@ class ServerStoreMigration(
 
         val useDynamicColors = prefs.getBoolean("use_dynamic_colors", false)
 
-        val themePresetString = prefs.getString("theme_preset", ThemePreset.DEFAULT.name)
+        val themePresetString = prefs.getString("theme_preset", ThemePreset.AMOLED.name)
         val themePreset =
             runCatching { ThemePreset.valueOf(themePresetString!!) }
-                .getOrDefault(ThemePreset.DEFAULT)
+                .getOrDefault(ThemePreset.AMOLED)
 
         val connectionProfilesRaw = prefs.getString("connection_profiles", null)
         val connectionProfiles =
